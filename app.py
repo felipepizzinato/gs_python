@@ -73,9 +73,9 @@ def main():
                     if info_pessoais(dados_usuario):
                         break
                 elif opcao == 2:
-                    disgnosticar()
+                    dados_consumo(dados_usuario)
                 elif opcao == 3:
-                    obter_oficina()
+                    solucoes()
                 else:
                     break
                 
