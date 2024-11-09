@@ -4,7 +4,6 @@ import oracledb
 #========================================================================================================================
 
 # Funções básicas do sistema 
-
 def obter_string(prompt):
     while True:
         valor = input(prompt).strip()
@@ -37,6 +36,28 @@ def obter_email():
         if validar_email(email):
             return email
         print('Formato de e-mail inválido. Por favor, insira um e-mail válido.')
+    
+
+def obter_kwh():
+    while True:
+        try:
+            kwh = float(input('Insira quanto de KWh teve de consumo: ').strip())
+            if kwh > 0:
+                return kwh
+            print('Valor de KWh inválido. Por favor, insira um número válido maior que zero.')
+        except ValueError:
+            print('Erro, tipo de entrada inválida. Por favor, insira um número.')
+   
+def obter_inteiro(prompt):
+    while True:
+        try:
+            opcao = int(input(prompt))
+            if opcao > 0:
+                return opcao
+            print('Valor de KWh inválido. Por favor, insira um número válido maior que zero.')
+        except ValueError:
+            print('Erro, tipo de entrada inválida. Por favor, insira um número.')
+              
     
 def coletar_id_usuario(dados):
     sql = "SELECT id_cliente FROM clientes WHERE email_usuario = :email_usuario"
@@ -89,12 +110,6 @@ def procurar_login_db(dados_usuario):
     except Exception as e:
         print(f'Ocorreu um erro ao procurar o login: {e}')
         return None
-
-
-
-
-    
-    
 
     
 def login():
@@ -192,14 +207,18 @@ def apresentando_menu_info_pessoais():
 def exibir_dados(id_usuario):
     sql = "SELECT * FROM t_sf_usuario WHERE id_usuario = :id_usuario"
     with get_conexao() as con:
-        with con.cursor() as cur:
-            cur.execute(sql, {"id_usuario": id_usuario})
-            dados = cur.fetchall()
-            print(f'(1) Nome: {dados[0][1]}')
-            print(f'(2) Email: {dados[0][2]}')
-            print(f'(3) Senha: {dados[0][3]}')
-        return True
-
+        try: 
+            with con.cursor() as cur:
+                cur.execute(sql, {"id_usuario": id_usuario})
+                dados = cur.fetchall()
+                print(f'(1) Nome: {dados[0][1]}')
+                print(f'(2) Email: {dados[0][2]}')
+                print(f'(3) Senha: {dados[0][3]}')
+            return True
+        except Exception as e:
+            print(f'Erro ao exibir dados: {e}')
+            
+            
 def alterar_usuario(id_usuario, campo, novo_valor):
     sql = f'UPDATE t_sf_usuario SET {campo} = :novo_valor WHERE id_usuario = :id_usuario'
     with get_conexao() as con:
@@ -274,6 +293,154 @@ def info_pessoais(id_usuario):
         else:
             break
         
+#========================================================================================================================
+
+
+def apresentar_dados_consumo(id_usuario):
+    sql = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_consumo WHERE id_usuario = :id_usuario ORDER BY data"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, {"id_usuario": id_usuario})
+                dados = cur.fetchall()
+                if not dados:
+                    print("Nenhum dado de consumo encontrado para este usuário.")
+                    return
+                print("Consumo do usuário:")
+                
+                for indice, dado in enumerate(dados, start=1):  # `start=1` para começar a enumeração no 1
+                    ano_consumo = dado[0]
+                    mes_consumo = dado[1]
+                    kwh_consumo = dado[2]
+                    print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\n")
+                    
+                return dados
+    except Exception as e:
+        print(f"Ocorreu um erro: {e}")
+
+
+def deletar_dados_consumo(id_usuario, indice):
+    sql = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_consumo WHERE id_usuario = :id_usuario ORDER BY data"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, {"id_usuario": id_usuario})
+                dados = cur.fetchall()
+
+                if not dados or indice < 1 or indice > len(dados):
+                    print("Índice inválido. Nenhum dado foi excluído.")
+                    return
+                ano_consumo, mes_consumo, kwh_consumo = dados[indice - 1]
+
+                sql_deletar = """
+                DELETE FROM t_consumo
+                WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo
+                """
+                cur.execute(sql_deletar, {"id_usuario": id_usuario, "ano_consumo": ano_consumo, "mes_consumo": mes_consumo})
+                con.commit()  
+                print(f"Consumo de {ano_consumo}-{mes_consumo} foi excluído com sucesso.")
+                
+    except Exception as e:
+        print(f"Ocorreu um erro ao tentar deletar o consumo: {e}")
+
+    
+def validar_cadastro_consumo(dados_consumo):
+    sql = "SELECT COUNT(*) FROM t_consumo WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo  AND mes_consumo = :mes_consumo"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, dados_consumo)
+                resultado = cur.fetchone()
+                if resultado:
+                    return resultado[0] > 0
+                else:
+                    return False
+    except Exception as e:
+        print(f"Erro ao verificar consumo: {e}")
+        return None
+   
+
+
+def realizar_cadastro_consumo(dados_consumo):
+    sql = "INSERT INTO t_dados_consumo (id_usuario, ano_consumo, mes_consumo, kwh_consumo) VALUES (:id_usuario, :ano_consumo, :mes_consumo, :kwh_consumo)"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, dados_consumo)
+                con.commit()
+                return True
+    except Exception as e:
+        print(f'Erro ao inserir os dados na tabela: {e}')
+        return None
+
+    
+def obter_dados_consumo(id_usuario):
+    ano_consumo = obter_string('Insira o ano do consumo que deseja registrar: ')    
+    mes_consumo = obter_string('Insira o mês do consumo que deseja registrar: ')    
+    kwh_consumo = obter_kwh()  
+    dados_consumo = {
+        "id_usuario": id_usuario,
+        "ano_consumo": ano_consumo,
+        "mes_consumo": mes_consumo,
+        "kwh_consumo": kwh_consumo  
+    }
+    
+    return dados_consumo
+    
+def cadastrar_consumo(id_usuario):
+    while True:
+        dados_consumo = obter_dados_consumo(id_usuario)
+        if validar_cadastro_consumo(dados_consumo):
+            print('Já existe um cadastro de consumo para este mês, por favor insira os dados novamente para outro mês')
+        else:
+            realizar_cadastro_consumo(dados_consumo)
+            print('Dados de consumo registrado com sucesso')
+            
+        
+def excluir_dados_consumo(id_usuario, dados):
+    sql = "DELETE FROM t_consumo WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                while True: 
+                    opcao = obter_inteiro('Insira o indíce do consumo que deseja excluir: ')
+                    if opcao < 1 or opcao > len(dados):
+                        print("Índice inválido! Por favor, insira um número válido.")
+                    else:
+                        break
+        
+                dados_consumo = {
+                    "id_usuario": id_usuario,
+                    "ano_consumo" : dados[opcao - 1][0],
+                    "mes_consumo": dados[opcao - 1][1]
+                }
+                cur.execute(sql, dados_consumo)
+                con.commit()
+                print("Consumo excluído com sucesso!")
+                return True
+    except Exception as e:
+        print(f'Erro ao deletar os dados na tabela: {e}')
+        return None
+
+def dados_consumo(id_usuario):
+    while True: 
+        dados = apresentar_dados_consumo(id_usuario)
+        print('(1) ADICIONAR DADOS DE CONSUMO')
+        print('(2) EXCLUIR DADOS DE CONSUMO')
+        print('(3) VOLTAR AO MENU PRINCIPAL')
+        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 3)
+        if opcao == 1:
+            adicionar_dados_consumo(id_usuario)
+        elif opcao == 2:
+            excluir_dados_consumo(id_usuario, dados)
+        else:
+            break
+    
+
+
+
+
+
 #========================================================================================================================
 
 
