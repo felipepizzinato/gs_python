@@ -165,9 +165,128 @@ def cadastro():
 #========================================================================================================================
 
 
+def apresentando_menu_principal():
+    print("-------------------------------")
+    print('|        MENU PRINCIPAL        |')
+    print("-------------------------------\n")
+    print('(1) INFORMAÇÕES PESSOAIS')
+    print('(2) ANALISAR DADOS DE CONSUMO')
+    print('(3) SUGESTÕES')
+    print('(4) VOLTAR AO MENU DE LOGIN | CADASTRO')
+
+    return obter_opcao_menu('Escolha uma opção do menu de cadastro: ', 1, 4)
 
 
+def apresentando_menu_info_pessoais():
+    print("-------------------------------------------")
+    print('|        MENU INFORMAÇÕES PESSOAIS        |')
+    print("-------------------------------------------\n")
+    print('(1) VER MEUS DADOS DE CADASTRO')
+    print('(2) ALTERAR DADOS DE CADASTRO')
+    print('(3) EXCLUIR CADASTRO')
+    print('(4) VOLTAR AO MENU PRINCIPAL')
 
+    return obter_opcao_menu('Escolha uma opção do menu de cadastro: ', 1, 4)
+
+
+def exibir_dados(id_usuario):
+    sql = "SELECT * FROM t_sf_usuario WHERE id_usuario = :id_usuario"
+    with get_conexao() as con:
+        with con.cursor() as cur:
+            cur.execute(sql, {"id_usuario": id_usuario})
+            dados = cur.fetchall()
+            print(f'(1) Nome: {dados[0][1]}')
+            print(f'(2) Email: {dados[0][2]}')
+            print(f'(3) Senha: {dados[0][3]}')
+        return True
+
+def alterar_usuario(id_usuario, campo, novo_valor):
+    sql = f'UPDATE t_sf_usuario SET {campo} = :novo_valor WHERE id_usuario = :id_usuario'
+    with get_conexao() as con:
+        with con.cursor() as cur:
+            try:
+                cur.execute(sql, {'novo_valor': novo_valor, 'id_usuario': id_usuario})
+                con.commit()
+                print(f'{campo.capitalize()} atualizado com sucesso!')
+                return True
+            except Exception as e:
+                print(f'Ocorreu um erro ao atualizar {campo}: {e}')
+
+def alterar_dados(id_usuario):
+    exibir_dados(id_usuario)
+    escolha = obter_opcao_menu('Insira qual dado você deseja alterar (digite 4 para cancelar a operação): ', 1, 4)
+
+    if escolha == 1:
+        novo_nome = obter_string('Digite o novo nome: ')
+        alterar_usuario(id_usuario, 'nm_usuario', novo_nome)
+    elif escolha == 2:
+        while True:
+            novo_email = obter_email()
+            dados = {
+                "email_usuario":novo_email
+                }
+            
+            
+            if usuario_existe(dados):
+                print('Erro: O usuário já existe. Escolha outro nome de usuário.')
+            else:
+                alterar_usuario(id_usuario, 'email_usuario', novo_email)
+    elif escolha == 3:
+        nova_senha = obter_string('Digite a nova senha: ')
+        alterar_usuario(id_usuario, 'senha_usuario', nova_senha)       
+    else:
+        print('Operação cancelada.')
+        
+def deletar(id_usuario):
+    sql = "DELETE FROM t_usuario WHERE id_usuario = :id_usuario"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, {"id_usuario": id_usuario})
+                con.commit() 
+                print('Usuário excluído com sucesso!')
+    except Exception as e:
+        print(f'Ocorreu um erro ao excluir o usuário: {e}')
+
+def deletar_usuario(id_usuario):
+    print('Você realmente deseja apagar sua conta?')
+    print('(1) Sim')
+    print('(2) Não')
+    opcao = obter_opcao_menu('Escolha uma opção do menu de cadastro: ', 1, 2)
+    if opcao == 1:
+        deletar(id_usuario)
+        return True
+    else:
+        print('Operação cancelada.')
+        return None
+
+def info_pessoais(id_usuario):
+    while True:
+        opcao = apresentando_menu_info_pessoais()
+        if opcao == 1:
+            exibir_dados(id_usuario)
+        elif opcao == 2:
+            alterar_dados(id_usuario)
+        elif opcao == 3:
+            if deletar_usuario(id_usuario):
+                return True
+                
+        else:
+            break
+        
+#========================================================================================================================
+
+
+def solucoes():
+    sql = "SELECT tema_sugestao, ds_sugestao FROM t_sugestoes"
+    with get_conexao() as con:
+        with con.cursor() as cur:
+            cur.execute(sql)
+            dados = cur.fetchall()
+            for tema, sugestao in dados:
+                print(f"Tema: {tema} - Sugestão: {sugestao}")       
+        return True
+#========================================================================================================================
 
 
 def main():
