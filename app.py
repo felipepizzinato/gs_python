@@ -38,7 +38,17 @@ def obter_email():
             return email
         print('Formato de e-mail inválido. Por favor, insira um e-mail válido.')
     
-
+def coletar_id_usuario(dados):
+    sql = "SELECT id_cliente FROM clientes WHERE email_usuario = :email_usuario"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, dados)
+                resultado = cur.fetchone()  
+                return resultado[0]
+    except Exception as e:
+        print(f'Ocorreu um erro ao procurar o login: {e}')
+        return None
 #========================================================================================================================
 
 def apresentando_menu_login_cadastro():
@@ -52,7 +62,104 @@ def apresentando_menu_login_cadastro():
     return obter_opcao_menu('Escolha uma opção do menu: ', 1, 3)
 
 
+def coletar_info_login():
+    email = obter_string('Insira seu email: ')
+    senha = obter_string('Insira sua Senha: ')
+    dados_usuario = {
+        "email_usuario": email,
+        "senha_usuario": senha
+    }
+    return dados_usuario
 
+def procurar_login_db(dados_usuario):
+    sql = "SELECT COUNT(*) FROM t_sf_usuario WHERE email_usuario = :email_usuario AND senha_usuario = :senha_usuario"
+    
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, dados_usuario)
+                resultado = cur.fetchone()  
+                if resultado and resultado[0] > 0:
+                    print('LOGIN REALIZADO!')
+                    id = coletar_id_usuario(dados_usuario)
+                    return id 
+                else:
+                    print('USUÁRIO NÃO ENCONTRADO')
+                    return None
+    except Exception as e:
+        print(f'Ocorreu um erro ao procurar o login: {e}')
+        return None
+
+
+
+def login():
+    dados_usuario = coletar_info_login()
+    id = procurar_login_db(dados_usuario)
+    if id:
+        return id
+    else:
+        return None
+    
+    
+def coleta_info_cadastro():
+    nome = obter_string('Insira seu Nome: ')
+    email = obter_email()
+    senha = obter_string('Insira sua Senha: ')
+    dados = {
+        "nm_usuario": nome,
+        "email_usuario": email,
+        "senha_usuario":senha,
+    }
+    return dados
+
+def usuario_existe(dados):
+    email = dados['email_usuario']
+    sql = "SELECT COUNT(*) FROM t_usuario WHERE email_usuario = :email_usuario"
+    
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, {"email_usuario": email})
+                resultado = cur.fetchone()
+                if resultado:
+                    return resultado[0] > 0
+                else:
+                    return False
+    except Exception as e:
+        print(f'Ocorreu um erro ao verificar a existência do usuário: {e}')
+        return False
+
+
+def cadastrar_usuario(dados):
+    email = dados['email_usuario']
+    sql = "INSERT INTO t_usuario (nm_usuario, email_usuario, senha_usuario) VALUES (:nm_usuario, :email_usuario, :senha_usuario)"
+
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, dados)
+                con.commit() 
+                print('Usuário cadastrado com sucesso!')
+                id = coletar_id_usuario(email)
+                return id 
+    except Exception as e:
+        print(f'Ocorreu um erro ao cadastrar o usuário: {e}')
+        return False
+
+    
+def cadastro():
+    while True:
+        info_cadastro = coleta_info_cadastro()
+        if usuario_existe(info_cadastro):
+            print('Usuário existente, por favor insira os dados navamente com outro usuário')
+        else:
+            cadastrar_usuario(info_cadastro)
+            return info_cadastro
+    
+    
+
+
+#========================================================================================================================
 
 
 
@@ -60,7 +167,7 @@ def main():
     while True:
         opcao = apresentando_menu_login_cadastro()
         if opcao == 1:
-            dados_usuario = login()
+            id = login()
         elif opcao == 2:
             dados_usuario = cadastro()
         else:
