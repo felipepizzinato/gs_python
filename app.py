@@ -81,8 +81,8 @@ def procurar_login_db(dados_usuario):
                 resultado = cur.fetchone()  
                 if resultado and resultado[0] > 0:
                     print('LOGIN REALIZADO!')
-                    id = coletar_id_usuario(dados_usuario)
-                    return id 
+                    id_usuario = coletar_id_usuario(dados_usuario)
+                    return id_usuario 
                 else:
                     print('USUÁRIO NÃO ENCONTRADO')
                     return None
@@ -92,15 +92,19 @@ def procurar_login_db(dados_usuario):
 
 
 
+
+    
+    
+
+    
 def login():
     dados_usuario = coletar_info_login()
-    id = procurar_login_db(dados_usuario)
-    if id:
-        return id
+    id_usuario = procurar_login_db(dados_usuario)
+    if id_usuario:
+        return id_usuario
     else:
         return None
-    
-    
+
 def coleta_info_cadastro():
     nome = obter_string('Insira seu Nome: ')
     email = obter_email()
@@ -129,7 +133,6 @@ def usuario_existe(dados):
         print(f'Ocorreu um erro ao verificar a existência do usuário: {e}')
         return False
 
-
 def cadastrar_usuario(dados):
     email = dados['email_usuario']
     sql = "INSERT INTO t_usuario (nm_usuario, email_usuario, senha_usuario) VALUES (:nm_usuario, :email_usuario, :senha_usuario)"
@@ -140,8 +143,8 @@ def cadastrar_usuario(dados):
                 cur.execute(sql, dados)
                 con.commit() 
                 print('Usuário cadastrado com sucesso!')
-                id = coletar_id_usuario(email)
-                return id 
+                id_usuario = coletar_id_usuario(email)
+                return id_usuario 
     except Exception as e:
         print(f'Ocorreu um erro ao cadastrar o usuário: {e}')
         return False
@@ -153,8 +156,8 @@ def cadastro():
         if usuario_existe(info_cadastro):
             print('Usuário existente, por favor insira os dados navamente com outro usuário')
         else:
-            cadastrar_usuario(info_cadastro)
-            return info_cadastro
+            id_usuario = cadastrar_usuario(info_cadastro)
+            return id_usuario
     
     
 
@@ -163,24 +166,28 @@ def cadastro():
 
 
 
+
+
+
+
 def main():
     while True:
         opcao = apresentando_menu_login_cadastro()
         if opcao == 1:
-            id = login()
+            id_usuario = login()
         elif opcao == 2:
-            dados_usuario = cadastro()
+            id_usuario = cadastro()
         else:
             print('Saindo do sistema...')
             break
-        if dados_usuario:
+        if id_usuario:
             while True:
                 opcao = apresentando_menu_principal()
                 if opcao == 1:
-                    if info_pessoais(dados_usuario):
+                    if info_pessoais(id_usuario):
                         break
                 elif opcao == 2:
-                    dados_consumo(dados_usuario)
+                    dados_consumo(id_usuario)
                 elif opcao == 3:
                     solucoes()
                 else:
