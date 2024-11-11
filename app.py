@@ -195,7 +195,7 @@ def apresentando_menu_principal():
     print('|        MENU PRINCIPAL        |')
     print("-------------------------------\n")
     print('(1) INFORMAÇÕES PESSOAIS')
-    print('(2) ANALISAR DADOS DE CONSUMO')
+    print('(2) MONITORAR DADOS DE CONSUMO')
     print('(3) SUGESTÕES')
     print('(4) VOLTAR AO MENU DE LOGIN | CADASTRO')
 
