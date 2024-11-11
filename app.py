@@ -306,6 +306,16 @@ def info_pessoais(id_usuario):
 #========================================================================================================================
 
 
+def realizar_media_kwh(kwh):
+    media = kwh / 30
+    if media <= 5:
+        return "Consumo Baixo. Parabéns! Seu consumo está em um nível sustentável."
+    elif media >= 5 and media <= 10:
+        return "Consumo Moderado. Atenção! Você está consumindo de forma moderada.COnsidere otmizar o uso de alguns aparelhos."
+    else:
+        return "Consumo Alto. Alerta! Seu consumo está alto. Reduza o uso de energia para ajudar o planeta e economizar."
+
+
 def apresentar_dados_consumo(id_usuario):
     sql = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario"
     try:
@@ -322,7 +332,8 @@ def apresentar_dados_consumo(id_usuario):
                     ano_consumo = dado[0]
                     mes_consumo = dado[1]
                     kwh_consumo = dado[2]
-                    print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\n")
+                    cat_consumo = realizar_media_kwh(kwh_consumo)
+                    print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\nCategoria de consumo: {cat_consumo}")
                     
                 return dados
     except Exception as e:
