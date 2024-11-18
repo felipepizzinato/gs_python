@@ -55,7 +55,7 @@ def obter_inteiro(prompt):
             opcao = int(input(prompt))
             if opcao > 0:
                 return opcao
-            print('Valor de KWh inválido. Por favor, insira um número válido maior que zero.')
+            print('Valor inválido. Por favor, insira um número inteiro válido maior que zero.')
         except ValueError:
             print('Erro, tipo de entrada inválida. Por favor, insira um número.')
               
@@ -71,6 +71,32 @@ def coletar_id_usuario(email):
     except Exception as e:
         print(f'Ocorreu um erro ao procurar o login: {e}')
         return None
+
+def validar_mes():
+    meses = {
+        "janeiro", "fevereiro", "março", "abril",
+        "maio", "junho", "julho", "agosto",
+        "setembro", "outubro", "novembro", "dezembro"
+    }
+    while True:
+        mes_usuario = obter_string('Insira o mês do consumo que deseja registrar: ').lower()
+        for mes in meses:
+            if mes_usuario == mes:
+                return mes_usuario
+        print('Mês inválido! Insira novamente um mês válido')
+
+def validar_ano():
+    ano_minimo=1900
+    ano_maximo=2100
+    while True:
+        ano = obter_inteiro('Insira o ano do consumo que deseja registrar: ')
+        if ano_minimo <= ano <= ano_maximo:
+            return ano
+        else:
+            print(f"Ano inválido! O ano deve estar entre {ano_minimo} e {ano_maximo}.")
+            return False
+        
+                
 #========================================================================================================================
 
 def apresentando_menu_login_cadastro():
@@ -312,7 +338,7 @@ def realizar_media_kwh(kwh):
     if media <= 5:
         return "Consumo Baixo. Parabéns! Seu consumo está em um nível sustentável."
     elif media >= 5 and media <= 10:
-        return "Consumo Moderado. Atenção! Você está consumindo de forma moderada.COnsidere otmizar o uso de alguns aparelhos."
+        return "Consumo Moderado. Atenção! Você está consumindo de forma moderada.Considere otmizar o uso de alguns aparelhos."
     else:
         return "Consumo Alto. Alerta! Seu consumo está alto. Reduza o uso de energia para ajudar o planeta e economizar."
 
@@ -402,8 +428,8 @@ def realizar_cadastro_consumo(dados_consumo):
 
     
 def obter_dados_consumo(id_usuario):
-    ano_consumo = obter_string('Insira o ano do consumo que deseja registrar: ')    
-    mes_consumo = obter_string('Insira o mês do consumo que deseja registrar: ')    
+    ano_consumo = validar_ano()  
+    mes_consumo = validar_mes()    
     kwh_consumo = obter_kwh()  
     dados_consumo = {
         "id_usuario": id_usuario,
@@ -419,7 +445,6 @@ def cadastrar_consumo(id_usuario):
         dados_consumo = obter_dados_consumo(id_usuario)
         if validar_cadastro_consumo(dados_consumo):
             print('Já existe um cadastro de consumo para este mês, por favor insira os dados novamente para outro mês')
-            break
         else:
             realizar_cadastro_consumo(dados_consumo)
             print('Dados de consumo registrado com sucesso')
@@ -452,39 +477,55 @@ def deletar_dados_de_consumo(id_usuario):
             print("Índice inválido! Por favor, insira um número válido.")
         else:
             break
+    indice = opcao
     print('Você realmente deseja apagar este dado de consumo ?')
     print('(1) Sim')
     print('(2) Não')
     opcao = obter_opcao_menu('Escolha uma opção do menu de cadastro: ', 1, 2)
     if opcao == 1:
-        sql_deletar_dados_consumo(id_usuario, dados, opcao)
+        sql_deletar_dados_consumo(id_usuario, dados, indice)
         return True
     else:
         print('Operação cancelada.')
         return None
 #========================================================================================================================
 
+import matplotlib.pyplot as plt
+import numpy as np
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 def consultar_dados(id_usuario):
-    query = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario ORDER BY ano_consumo, mes_consumo  "
+    query = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario ORDER BY ano_consumo, mes_consumo"
     
     try:
         with get_conexao() as con:
             with con.cursor() as cur:
-                cur.execute(query,  {"id_usuario": id_usuario})
+                cur.execute(query, {"id_usuario": id_usuario})
                 dados = cur.fetchall()
                 return dados
     except Exception as e:
         print(f"Erro ao executar consulta: {e}")
         return []
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 def processar_dados(dados):
     anos = []
     meses = []
     kwh = []
 
+    meses_numericos = {
+        "janeiro": 1, "fevereiro": 2, "março": 3, "abril": 4,
+        "maio": 5, "junho": 6, "julho": 7, "agosto": 8,
+        "setembro": 9, "outubro": 10, "novembro": 11, "dezembro": 12
+    }
+
     for dado in dados:
         anos.append(dado[0])
-        meses.append(dado[1])
+        meses.append(meses_numericos[dado[1].lower()])  
         kwh.append(dado[2])
 
     return anos, meses, kwh
@@ -492,43 +533,106 @@ def processar_dados(dados):
 def criar_grafico_comparativo(anos, meses, kwh):
     anos_unicos = sorted(set(anos))
     cores = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-    legenda = [] 
+    legenda = []
 
-    plt.figure(figsize=(12, 6)) 
+    nomes_meses = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ]
+
+    plt.figure(figsize=(12, 6))  
 
     for i, ano in enumerate(anos_unicos):
         meses_ano = [mes for j, mes in enumerate(meses) if anos[j] == ano]
         kwh_ano = [valor for j, valor in enumerate(kwh) if anos[j] == ano]
 
+        meses_ano, kwh_ano = zip(*sorted(zip(meses_ano, kwh_ano)))
+
         plt.plot(meses_ano, kwh_ano, marker='o', linestyle='-', color=cores[i % len(cores)], label=f'Ano {ano}')
         legenda.append(f'Ano {ano}')
+
     plt.title('Comparativo de Consumo de Energia por Mês e Ano', fontsize=16)
     plt.xlabel('Mês', fontsize=12)
     plt.ylabel('kWh Consumido', fontsize=12)
 
+    plt.xticks(np.arange(1, 13), nomes_meses, rotation=45) 
+
     plt.legend()
-    plt.xticks(np.arange(1, 13, 1))
     plt.grid(True)
-    plt.tight_layout()
+    plt.tight_layout()  
     plt.show()
 
-    
-    
-#========================================================================================================================
-def dados_consumo(id_usuario):
+def grafico_mes_consumo(id_usuario):
     dados = consultar_dados(id_usuario)
     anos, meses, kwh = processar_dados(dados)
     criar_grafico_comparativo(anos, meses, kwh)
+    return None
+#========================================================================================================================
+    
+
+
+import matplotlib.pyplot as plt
+
+def processar_dados_anuais(dados):
+    consumo_anual = {}
+
+    for dado in dados:
+        ano = dado[0]
+        kwh = dado[2]
+        if ano in consumo_anual:
+            consumo_anual[ano] += kwh
+        else:
+            consumo_anual[ano] = kwh
+
+    return consumo_anual
+
+def criar_grafico_consumo_anual(consumo_anual):
+    anos = list(map(int, consumo_anual.keys()))
+    total_kwh = list(consumo_anual.values())
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(anos, total_kwh, color='skyblue', edgecolor='black')
+
+    plt.title('Consumo Total Anual de Energia', fontsize=16)
+    plt.xlabel('Ano', fontsize=12)
+    plt.ylabel('kWh Consumido', fontsize=12)
+
+    for i, valor in enumerate(total_kwh):
+        plt.text(anos[i], valor + 10, f'{valor}', ha='center', fontsize=10)
+
+    plt.xticks(anos, fontsize=10)  
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.show()
+
+def grafico_consumo_total_anual(id_usuario):
+    dados = consultar_dados(id_usuario)  
+    if not dados:
+        print("Nenhum dado encontrado para o usuário.")
+        return None
+
+    consumo_anual = processar_dados_anuais(dados) 
+    criar_grafico_consumo_anual(consumo_anual)    
+
+#========================================================================================================================
+def dados_consumo(id_usuario):
+
     while True: 
         apresentar_dados_consumo(id_usuario)
         print('(1) ADICIONAR DADOS DE CONSUMO')
         print('(2) EXCLUIR DADOS DE CONSUMO')
-        print('(3) VOLTAR AO MENU PRINCIPAL')
-        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 3)
+        print('(3) GRÁFICO COMPARAÇÃO MÊS CONSUMO')
+        print('(4) GRÁFICO CONSUMO TOTAL POR ANO')
+        print('(5) VOLTAR AO MENU PRINCIPAL')
+        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 4)
         if opcao == 1:
             cadastrar_consumo(id_usuario)
         elif opcao == 2:
             deletar_dados_de_consumo(id_usuario)
+        elif opcao == 3:
+            grafico_mes_consumo(id_usuario)
+        elif opcao == 4:
+            grafico_consumo_total_anual(id_usuario)
         else:
             break
         
