@@ -1,6 +1,7 @@
 import re
 import oracledb
-
+import matplotlib.pyplot as plt
+import numpy as np
 #========================================================================================================================
 
 # Funções básicas do sistema 
@@ -461,8 +462,63 @@ def deletar_dados_de_consumo(id_usuario):
     else:
         print('Operação cancelada.')
         return None
+#========================================================================================================================
 
+def consultar_dados(id_usuario):
+    query = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario ORDER BY ano_consumo, mes_consumo  "
+    
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(query,  {"id_usuario": id_usuario})
+                dados = cur.fetchall()
+                return dados
+    except Exception as e:
+        print(f"Erro ao executar consulta: {e}")
+        return []
+
+def processar_dados(dados):
+    anos = []
+    meses = []
+    kwh = []
+
+    for dado in dados:
+        anos.append(dado[0])
+        meses.append(dado[1])
+        kwh.append(dado[2])
+
+    return anos, meses, kwh
+
+def criar_grafico_comparativo(anos, meses, kwh):
+    anos_unicos = sorted(set(anos))
+    cores = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+    legenda = [] 
+
+    plt.figure(figsize=(12, 6)) 
+
+    for i, ano in enumerate(anos_unicos):
+        meses_ano = [mes for j, mes in enumerate(meses) if anos[j] == ano]
+        kwh_ano = [valor for j, valor in enumerate(kwh) if anos[j] == ano]
+
+        plt.plot(meses_ano, kwh_ano, marker='o', linestyle='-', color=cores[i % len(cores)], label=f'Ano {ano}')
+        legenda.append(f'Ano {ano}')
+    plt.title('Comparativo de Consumo de Energia por Mês e Ano', fontsize=16)
+    plt.xlabel('Mês', fontsize=12)
+    plt.ylabel('kWh Consumido', fontsize=12)
+
+    plt.legend()
+    plt.xticks(np.arange(1, 13, 1))
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    
+    
+#========================================================================================================================
 def dados_consumo(id_usuario):
+    dados = consultar_dados(id_usuario)
+    anos, meses, kwh = processar_dados(dados)
+    criar_grafico_comparativo(anos, meses, kwh)
     while True: 
         apresentar_dados_consumo(id_usuario)
         print('(1) ADICIONAR DADOS DE CONSUMO')
@@ -475,7 +531,9 @@ def dados_consumo(id_usuario):
             deletar_dados_de_consumo(id_usuario)
         else:
             break
+        
     
+
 #========================================================================================================================
 
 
