@@ -450,8 +450,32 @@ def cadastrar_consumo(id_usuario):
             realizar_cadastro_consumo(dados_consumo)
             print('Dados de consumo registrado com sucesso')
             break
-            
-        
+
+
+def sql_alterar_dados_consumo(novo_valor, id_usuario, ano_consumo, mes_consumo):
+    sql = "UPDATE t_usuario SET {campo} = :novo_valor WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo "
+    with get_conexao() as con:
+        with con.cursor() as cur:
+            try:
+                cur.execute(sql, {'novo_valor': novo_valor, 'id_usuario': id_usuario, 'ano_consumo':ano_consumo, 'mes_consumo':mes_consumo})
+                con.commit()
+                print(f'{campo.capitalize()} atualizado com sucesso!')
+                return True
+            except Exception as e:
+                print(f'Ocorreu um erro ao atualizar {campo}: {e}')
+
+def alterar_dados_consumo(id_usuario):
+    dados = apresentar_dados_consumo(id_usuario)
+    while True: 
+        opcao = obter_inteiro('Insira o indíce do consumo que deseja excluir: ')
+        if opcao < 1 or opcao > len(dados):
+            print("Índice inválido! Por favor, insira um número válido.")
+        else:
+            break
+    indice = opcao
+    
+
+
 def sql_deletar_dados_consumo(id_usuario, dados,opcao):
     sql = "DELETE FROM t_dados_consumo WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo"
     try:
@@ -491,12 +515,6 @@ def deletar_dados_de_consumo(id_usuario):
         return None
 #========================================================================================================================
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-import matplotlib.pyplot as plt
-import numpy as np
-
 def consultar_dados(id_usuario):
     query = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario ORDER BY ano_consumo, mes_consumo"
     
@@ -509,9 +527,6 @@ def consultar_dados(id_usuario):
     except Exception as e:
         print(f"Erro ao executar consulta: {e}")
         return []
-
-import matplotlib.pyplot as plt
-import numpy as np
 
 def processar_dados(dados):
     anos = []
