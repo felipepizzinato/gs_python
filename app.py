@@ -3,6 +3,7 @@ import oracledb
 import matplotlib.pyplot as plt
 import numpy as np
 from colorama import Fore, Back, Style, init
+import datetime
 #========================================================================================================================
 
 # Funções básicas do sistema 
@@ -87,17 +88,41 @@ def validar_mes():
         print('Mês inválido! Insira novamente um mês válido')
 
 def validar_ano():
-    ano_minimo=1900
-    ano_maximo=2100
+    ano_minimo=2015
+    ano_atual = datetime.datetime.now().year
     while True:
         ano = obter_inteiro('Insira o ano do consumo que deseja registrar: ')
-        if ano_minimo <= ano <= ano_maximo:
+        if ano_minimo <= ano <= ano_atual:
             return ano
         else:
-            print(f"Ano inválido! O ano deve estar entre {ano_minimo} e {ano_maximo}.")
-            return False
+            print(f"Ano inválido! O ano deve estar entre {ano_minimo} e {ano_atual}.")
         
-                
+        
+def realizar_media_kwh(kwh):
+    media = kwh / 30
+    if media <= 5:
+        print( Fore.GREEN + "Consumo Baixo. Parabéns! Seu consumo está em um nível sustentável." + Style.RESET_ALL)
+    elif media >= 5 and media <= 10:
+        print( Fore.YELLOW + "Consumo Moderado. Atenção! Você está consumindo de forma moderada.Considere otmizar o uso de alguns aparelhos." + Style.RESET_ALL)
+    else:
+        print( Fore.RED + "Consumo Alto. Alerta! Seu consumo está alto. Reduza o uso de energia para ajudar o planeta e economizar." + Style.RESET_ALL)
+    return None
+        
+def selecionar_indice_dados_consumo(dados):
+    while True: 
+        opcao = obter_inteiro('Insira o indíce do consumo: ')
+        if opcao < 1 or opcao > len(dados):
+            print("Índice inválido! Por favor, insira um número válido.")
+        else:
+            break
+    return opcao
+
+def apresentar_consumo_selecionado(indice, dados, id_usuario):
+    dados_consumo = {"ano_consumo": dados[indice-1][0],
+                     "mes_consumo": dados[indice-1][1],
+                     "id_usuario": id_usuario}
+    print(f"(1)Ano consumo: {dados[indice-1][0]} \n(2)Mês consumo: {dados[indice-1][1]} \n(3)Kwh: {dados[indice-1][2]}")
+    return dados_consumo
 #========================================================================================================================
 
 def apresentando_menu_login_cadastro():
@@ -333,17 +358,6 @@ def info_pessoais(id_usuario):
         
 #========================================================================================================================
 
-
-def realizar_media_kwh(kwh):
-    media = kwh / 30
-    if media <= 5:
-        print( Fore.GREEN + "Consumo Baixo. Parabéns! Seu consumo está em um nível sustentável." + Style.RESET_ALL)
-    elif media >= 5 and media <= 10:
-        print( Fore.YELLOW + "Consumo Moderado. Atenção! Você está consumindo de forma moderada.Considere otmizar o uso de alguns aparelhos." + Style.RESET_ALL)
-    else:
-        print( Fore.RED + "Consumo Alto. Alerta! Seu consumo está alto. Reduza o uso de energia para ajudar o planeta e economizar." + Style.RESET_ALL)
-    return None
-
 def apresentar_dados_consumo(id_usuario):
     sql = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario"
     try:
@@ -355,43 +369,18 @@ def apresentar_dados_consumo(id_usuario):
                     print("Nenhum dado de consumo encontrado para este usuário.")
                     return
                 print("Consumo do usuário:")
-                
+
                 for indice, dado in enumerate(dados, start=1): 
                     ano_consumo = dado[0]
                     mes_consumo = dado[1]
                     kwh_consumo = dado[2]
-                    print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\nCategoria de consumo: {realizar_media_kwh(kwh_consumo)}")
-                    
+                    print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\nCategoria de consumo:")
+                    realizar_media_kwh(kwh_consumo)
+
                 return dados
     except Exception as e:
         print(f"Ocorreu um erro: {e}")
-
-
-def deletar_dados_consumo(id_usuario, indice):
-    sql = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario ORDER BY data"
-    try:
-        with get_conexao() as con:
-            with con.cursor() as cur:
-                cur.execute(sql, {"id_usuario": id_usuario})
-                dados = cur.fetchall()
-
-                if not dados or indice < 1 or indice > len(dados):
-                    print("Índice inválido. Nenhum dado foi excluído.")
-                    return
-                ano_consumo, mes_consumo, kwh_consumo = dados[indice - 1]
-
-                sql_deletar = """
-                DELETE FROM t_dados_consumo
-                WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo
-                """
-                cur.execute(sql_deletar, {"id_usuario": id_usuario, "ano_consumo": ano_consumo, "mes_consumo": mes_consumo})
-                con.commit()  
-                print(f"Consumo de {ano_consumo}-{mes_consumo} foi excluído com sucesso.")
-                
-    except Exception as e:
-        print(f"Ocorreu um erro ao tentar deletar o consumo: {e}")
-
-    
+ 
 def validar_cadastro_consumo(dados_consumo):
     dados_consumo = {
         "id_usuario": dados_consumo.get("id_usuario"),
@@ -440,7 +429,7 @@ def obter_dados_consumo(id_usuario):
     
     return dados_consumo
     
-def cadastrar_consumo(id_usuario):
+def logica_cadastrar_consumo(id_usuario):
     while True:
         dados_consumo = obter_dados_consumo(id_usuario)
         if validar_cadastro_consumo(dados_consumo):
@@ -450,41 +439,66 @@ def cadastrar_consumo(id_usuario):
             realizar_cadastro_consumo(dados_consumo)
             print('Dados de consumo registrado com sucesso')
             break
+                
+def sql_alterar_dados_consumo(novo_valor, id_usuario,campo, dados_consumo):
+    parametros = {
+    "novo_valor": novo_valor,
+    "id_usuario": id_usuario,
+    "ano_consumo": dados_consumo["ano_consumo"],
+    "mes_consumo": dados_consumo["mes_consumo"]
+}
 
-
-def sql_alterar_dados_consumo(novo_valor, id_usuario, ano_consumo, mes_consumo):
-    sql = "UPDATE t_usuario SET {campo} = :novo_valor WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo "
+    sql = f"UPDATE t_dados_consumo SET {campo} = :novo_valor WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo"
     with get_conexao() as con:
         with con.cursor() as cur:
             try:
-                cur.execute(sql, {'novo_valor': novo_valor, 'id_usuario': id_usuario, 'ano_consumo':ano_consumo, 'mes_consumo':mes_consumo})
+                cur.execute(sql, parametros)
                 con.commit()
-                print(f'{campo.capitalize()} atualizado com sucesso!')
-                return True
+                print("Ano_consumo atualizado com sucesso!")
             except Exception as e:
-                print(f'Ocorreu um erro ao atualizar {campo}: {e}')
+                print(f"Ocorreu um erro ao atualizar ano_consumo: {e}")
 
-def alterar_dados_consumo(id_usuario):
+def logica_alterar_dados_consumo(id_usuario):
     dados = apresentar_dados_consumo(id_usuario)
-    while True: 
-        opcao = obter_inteiro('Insira o indíce do consumo que deseja excluir: ')
-        if opcao < 1 or opcao > len(dados):
-            print("Índice inválido! Por favor, insira um número válido.")
-        else:
-            break
-    indice = opcao
-    
+    indice = selecionar_indice_dados_consumo(dados)
+    dados_consumo_antigo = apresentar_consumo_selecionado(indice, dados, id_usuario)
+    escolha = obter_opcao_menu('Insira qual dado você deseja alterar (digite 4 para cancelar a operação): ', 1, 4)
 
+    if escolha == 1:
+        while True:
+            novo_ano = validar_ano()
+            dados_consumo = dados_consumo_antigo.copy()
+            dados_consumo["ano_consumo"] = novo_ano
+            if validar_cadastro_consumo(dados_consumo):
+                print('Já existe um cadastro de consumo para este mês, por favor insira outra data')
+            else:
+                sql_alterar_dados_consumo(novo_ano, id_usuario, 'ano_consumo', dados_consumo_antigo)
+                break
+    elif escolha == 2:
+        while True:
+            novo_mes = validar_mes()
+            dados_consumo = dados_consumo_antigo.copy()
+            dados_consumo["mes_consumo"] = novo_mes
+            if validar_cadastro_consumo(dados_consumo):
+                    print('Já existe um cadastro de consumo para este mês, por favor insira outra data')
+            else:
+                sql_alterar_dados_consumo(novo_mes, id_usuario, 'mes_consumo', dados_consumo_antigo)
+                break
+    elif escolha == 3:
+        kwh_consumo = obter_kwh() 
+        sql_alterar_dados_consumo(kwh_consumo, id_usuario, 'kwh_consumo', dados_consumo_antigo)    
+    else:
+        print('Operação cancelada.')
 
-def sql_deletar_dados_consumo(id_usuario, dados,opcao):
+def sql_deletar_dados_consumo(id_usuario, dados,indice):
     sql = "DELETE FROM t_dados_consumo WHERE id_usuario = :id_usuario AND ano_consumo = :ano_consumo AND mes_consumo = :mes_consumo"
     try:
         with get_conexao() as con:
             with con.cursor() as cur:
                 dados_consumo = {
                     "id_usuario": id_usuario,
-                    "ano_consumo" : dados[opcao - 1][0],
-                    "mes_consumo": dados[opcao - 1][1]
+                    "ano_consumo" : dados[indice - 1][0],
+                    "mes_consumo": dados[indice - 1][1]
                 }
                 cur.execute(sql, dados_consumo)
                 con.commit()
@@ -494,15 +508,9 @@ def sql_deletar_dados_consumo(id_usuario, dados,opcao):
         print(f'Erro ao deletar os dados na tabela: {e}')
         return None
     
-def deletar_dados_de_consumo(id_usuario):
+def logica_deletar_dados_consumo(id_usuario):
     dados = apresentar_dados_consumo(id_usuario)
-    while True: 
-        opcao = obter_inteiro('Insira o indíce do consumo que deseja excluir: ')
-        if opcao < 1 or opcao > len(dados):
-            print("Índice inválido! Por favor, insira um número válido.")
-        else:
-            break
-    indice = opcao
+    indice = selecionar_indice_dados_consumo(dados)
     print('Você realmente deseja apagar este dado de consumo ?')
     print('(1) Sim')
     print('(2) Não')
@@ -516,7 +524,7 @@ def deletar_dados_de_consumo(id_usuario):
 #========================================================================================================================
 
 def consultar_dados(id_usuario):
-    query = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario ORDER BY ano_consumo, mes_consumo"
+    query = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario ORDER BY ano_consumo, mes_consumo "
     
     try:
         with get_conexao() as con:
@@ -636,19 +644,22 @@ def dados_consumo(id_usuario):
         print('(1) LISTAR DADOS DE CONSUMO')
         print('(2) ADICIONAR DADOS DE CONSUMO')
         print('(3) EXCLUIR DADOS DE CONSUMO')
-        print('(4) GRÁFICO COMPARAÇÃO MÊS CONSUMO')
-        print('(5) GRÁFICO CONSUMO TOTAL POR ANO')
-        print('(6) VOLTAR AO MENU PRINCIPAL')
-        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 6)
+        print('(4) ALTERAR DADOS DE CONSUMO')
+        print('(5) GRÁFICO COMPARAÇÃO MÊS CONSUMO')
+        print('(6) GRÁFICO CONSUMO TOTAL POR ANO')
+        print('(7) VOLTAR AO MENU PRINCIPAL')
+        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 7)
         if opcao == 1:
             apresentar_dados_consumo(id_usuario)
         if opcao == 2:
-            cadastrar_consumo(id_usuario)
+            logica_cadastrar_consumo(id_usuario)
         elif opcao == 3:
-            deletar_dados_de_consumo(id_usuario)
+            logica_deletar_dados_consumo(id_usuario)
         elif opcao == 4:
-            grafico_mes_consumo(id_usuario)
+            logica_alterar_dados_consumo(id_usuario)
         elif opcao == 5:
+            grafico_mes_consumo(id_usuario)
+        elif opcao == 6:
             grafico_consumo_total_anual(id_usuario)
         else:
             break
