@@ -2,6 +2,7 @@ import re
 import oracledb
 import matplotlib.pyplot as plt
 import numpy as np
+from colorama import Fore, Back, Style, init
 #========================================================================================================================
 
 # Funções básicas do sistema 
@@ -336,12 +337,12 @@ def info_pessoais(id_usuario):
 def realizar_media_kwh(kwh):
     media = kwh / 30
     if media <= 5:
-        return "Consumo Baixo. Parabéns! Seu consumo está em um nível sustentável."
+        print( Fore.GREEN + "Consumo Baixo. Parabéns! Seu consumo está em um nível sustentável." + Style.RESET_ALL)
     elif media >= 5 and media <= 10:
-        return "Consumo Moderado. Atenção! Você está consumindo de forma moderada.Considere otmizar o uso de alguns aparelhos."
+        print( Fore.YELLOW + "Consumo Moderado. Atenção! Você está consumindo de forma moderada.Considere otmizar o uso de alguns aparelhos." + Style.RESET_ALL)
     else:
-        return "Consumo Alto. Alerta! Seu consumo está alto. Reduza o uso de energia para ajudar o planeta e economizar."
-
+        print( Fore.RED + "Consumo Alto. Alerta! Seu consumo está alto. Reduza o uso de energia para ajudar o planeta e economizar." + Style.RESET_ALL)
+    return None
 
 def apresentar_dados_consumo(id_usuario):
     sql = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario"
@@ -359,8 +360,7 @@ def apresentar_dados_consumo(id_usuario):
                     ano_consumo = dado[0]
                     mes_consumo = dado[1]
                     kwh_consumo = dado[2]
-                    cat_consumo = realizar_media_kwh(kwh_consumo)
-                    print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\nCategoria de consumo: {cat_consumo}")
+                    print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\nCategoria de consumo: {realizar_media_kwh(kwh_consumo)}")
                     
                 return dados
     except Exception as e:
@@ -445,6 +445,7 @@ def cadastrar_consumo(id_usuario):
         dados_consumo = obter_dados_consumo(id_usuario)
         if validar_cadastro_consumo(dados_consumo):
             print('Já existe um cadastro de consumo para este mês, por favor insira os dados novamente para outro mês')
+            
         else:
             realizar_cadastro_consumo(dados_consumo)
             print('Dados de consumo registrado com sucesso')
@@ -571,8 +572,6 @@ def grafico_mes_consumo(id_usuario):
     
 
 
-import matplotlib.pyplot as plt
-
 def processar_dados_anuais(dados):
     consumo_anual = {}
 
@@ -618,20 +617,23 @@ def grafico_consumo_total_anual(id_usuario):
 def dados_consumo(id_usuario):
 
     while True: 
-        apresentar_dados_consumo(id_usuario)
-        print('(1) ADICIONAR DADOS DE CONSUMO')
-        print('(2) EXCLUIR DADOS DE CONSUMO')
-        print('(3) GRÁFICO COMPARAÇÃO MÊS CONSUMO')
-        print('(4) GRÁFICO CONSUMO TOTAL POR ANO')
-        print('(5) VOLTAR AO MENU PRINCIPAL')
-        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 4)
+        
+        print('(1) LISTAR DADOS DE CONSUMO')
+        print('(2) ADICIONAR DADOS DE CONSUMO')
+        print('(3) EXCLUIR DADOS DE CONSUMO')
+        print('(4) GRÁFICO COMPARAÇÃO MÊS CONSUMO')
+        print('(5) GRÁFICO CONSUMO TOTAL POR ANO')
+        print('(6) VOLTAR AO MENU PRINCIPAL')
+        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 6)
         if opcao == 1:
+            apresentar_dados_consumo(id_usuario)
+        if opcao == 2:
             cadastrar_consumo(id_usuario)
-        elif opcao == 2:
-            deletar_dados_de_consumo(id_usuario)
         elif opcao == 3:
-            grafico_mes_consumo(id_usuario)
+            deletar_dados_de_consumo(id_usuario)
         elif opcao == 4:
+            grafico_mes_consumo(id_usuario)
+        elif opcao == 5:
             grafico_consumo_total_anual(id_usuario)
         else:
             break
