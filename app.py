@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from colorama import Fore, Back, Style, init
 import datetime
+import csv
 #========================================================================================================================
 
 # Funções básicas do sistema 
@@ -123,6 +124,13 @@ def apresentar_consumo_selecionado(indice, dados, id_usuario):
                      "id_usuario": id_usuario}
     print(f"(1)Ano consumo: {dados[indice-1][0]} \n(2)Mês consumo: {dados[indice-1][1]} \n(3)Kwh: {dados[indice-1][2]}")
     return dados_consumo
+
+def calculo_emissao_co2(kwh):
+    print(f"Emissão Total de CO2:{kwh * 0.0125} Kg CO2e")
+    print('obs: Cálculo realizado de acordo com a calculado de CO2 de SOSMATAATLANTICA e carbonlifecycle')
+    
+
+
 #========================================================================================================================
 
 def apresentando_menu_login_cadastro():
@@ -376,6 +384,7 @@ def apresentar_dados_consumo(id_usuario):
                     kwh_consumo = dado[2]
                     print(f"{indice} :\nAno consumo: {ano_consumo}\nMês consumo: {mes_consumo}\nKWH: {kwh_consumo}\nCategoria de consumo:")
                     realizar_media_kwh(kwh_consumo)
+                    calculo_emissao_co2(kwh_consumo)
 
                 return dados
     except Exception as e:
@@ -507,6 +516,31 @@ def sql_deletar_dados_consumo(id_usuario, dados,indice):
     except Exception as e:
         print(f'Erro ao deletar os dados na tabela: {e}')
         return None
+def exportar_arquivo_csv(id_usuario):
+    sql = "SELECT ano_consumo, mes_consumo, kwh_consumo FROM t_dados_consumo WHERE id_usuario = :id_usuario"
+    try:
+        with get_conexao() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, {"id_usuario": id_usuario})
+                dados = cur.fetchall()
+                if not dados:
+                    print("Nenhum dado de consumo encontrado para este usuário.")
+                    return
+                colunas = [desc[0] for desc in cur.description]
+                nome_arquivo = f'dados_consumo_usuario_{id_usuario}.csv'
+                
+                with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo_csv:
+                    escritor = csv.writer(arquivo_csv)
+
+                    escritor.writerow(colunas)
+
+                    escritor.writerows(dados)
+
+                print(f"Dados exportados com sucesso para '{nome_arquivo}'")
+                
+    except Exception as e:
+        print(f"Ocorreu um erro: {e}")
+    
     
 def logica_deletar_dados_consumo(id_usuario):
     dados = apresentar_dados_consumo(id_usuario)
@@ -647,8 +681,9 @@ def dados_consumo(id_usuario):
         print('(4) ALTERAR DADOS DE CONSUMO')
         print('(5) GRÁFICO COMPARAÇÃO MÊS CONSUMO')
         print('(6) GRÁFICO CONSUMO TOTAL POR ANO')
-        print('(7) VOLTAR AO MENU PRINCIPAL')
-        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 7)
+        print('(7) EXPORTAR PARA ARQUIVO .csv')
+        print('(8) VOLTAR AO MENU PRINCIPAL')
+        opcao = obter_opcao_menu('Escolha uma opção: ', 1, 8)
         if opcao == 1:
             apresentar_dados_consumo(id_usuario)
         if opcao == 2:
@@ -661,6 +696,8 @@ def dados_consumo(id_usuario):
             grafico_mes_consumo(id_usuario)
         elif opcao == 6:
             grafico_consumo_total_anual(id_usuario)
+        elif opcao == 7:
+            exportar_arquivo_csv(id_usuario)
         else:
             break
         
